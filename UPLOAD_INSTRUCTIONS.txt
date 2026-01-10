@@ -1,0 +1,8 @@
+STOP!
+Do not upload the folder "site_for_github_v1.3".
+OPEN this folder.
+SELECT ALL the files inside (index.html, assets, main.dart.js...).
+DRAG them to GitHub.
+
+If you upload the source code (lib, pubspec, etc) - IT WILL NOT WORK.
+Only these files work.

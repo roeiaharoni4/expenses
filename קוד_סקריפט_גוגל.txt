@@ -1,0 +1,114 @@
+// Google Apps Script Code (Hebrew Headers Version)
+
+function doGet(e) {
+  var type = e.parameter.type || 'expense';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  var sheetName = type == 'supplier' ? 'Suppliers' : 'All_Expenses_Master';
+  var sheet = ss.getSheetByName(sheetName);
+  
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify([]))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) {
+     return ContentService.createTextOutput(JSON.stringify([]))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  // Headers are in Hebrew now, but we need to map them to English keys for the App
+  // ['מזהה', 'סכום', 'תאריך', ...]
+  var headers = data[0]; 
+  var rows = data.slice(1);
+  
+  // Key Translation Map (Hebrew to English)
+  var keyMap = {
+    'מזהה': 'id',
+    'סכום': 'amount',
+    'תאריך': 'date',
+    'מזהה_ספק': 'supplierId',
+    'שם_ספק': 'supplierName',
+    'שם': 'name',
+    'קטגוריה': 'category',
+    'הערות': 'notes',
+    'מספר_חשבונית': 'invoiceNumber'
+  };
+
+  var result = rows.map(function(row) {
+    var obj = {};
+    headers.forEach(function(header, i) {
+      // Use mapped English key if exists, otherwise original header
+      var key = keyMap[header] || header; 
+      obj[key] = row[i];
+    });
+    return obj;
+  });
+  
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var params = JSON.parse(e.postData.contents);
+  var type = params.type;
+  
+  if (type == 'supplier') {
+    var sheet = ss.getSheetByName("Suppliers");
+    if (!sheet) {
+      sheet = ss.insertSheet("Suppliers");
+      // Hebrew Headers
+      sheet.appendRow(["מזהה", "שם"]);
+    }
+    sheet.appendRow([params.id, params.name]);
+    
+  } else {
+    // Expense Handling
+    
+    // 1. Write to MASTER sheet
+    var masterSheet = ss.getSheetByName("All_Expenses_Master");
+    if (!masterSheet) {
+      masterSheet = ss.insertSheet("All_Expenses_Master");
+      // Hebrew Headers
+      masterSheet.appendRow(["מזהה", "סכום", "תאריך", "מזהה_ספק", "שם_ספק", "קטגוריה", "הערות", "מספר_חשבונית"]);
+    }
+    
+    var rowData = [
+      params.id, 
+      params.amount, 
+      params.date, 
+      params.supplierId, 
+      params.supplierName || "Unknown", 
+      params.category, 
+      params.notes, 
+      params.invoiceNumber
+    ];
+    
+    masterSheet.appendRow(rowData);
+    
+    // 2. Write to SPECIFIC SUPPLIER sheet
+    var supplierName = params.supplierName || "Misc";
+    // Sanitize sheet name
+    var safeName = supplierName.replace(/[:\/\\?*\[\]]/g, "_");
+    var supplierSheet = ss.getSheetByName(safeName);
+    
+    if (!supplierSheet) {
+      supplierSheet = ss.insertSheet(safeName);
+      // Hebrew Headers for Supplier Sheet
+      supplierSheet.appendRow(["מזהה", "סכום", "תאריך", "קטגוריה", "הערות", "מספר_חשבונית"]);
+    }
+    
+    supplierSheet.appendRow([
+      params.id, 
+      params.amount, 
+      params.date, 
+      params.category, 
+      params.notes, 
+      params.invoiceNumber
+    ]);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({"status": "success"}));
+}
