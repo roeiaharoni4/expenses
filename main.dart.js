@@ -44138,7 +44138,7 @@ if(j.length===0){q=A.c([],t.Vu)
 s=1
 break}p=4
 s=7
-return A.W(A.aLE(A.fE(j+"?type=expense")),$async$wA)
+return A.W(A.aLE(A.fE(j+"?type=expense&_t="+Date.now())),$async$wA)
 case 7:n=b
 if(n.b===200){j=n
 m=B.bW.f8(0,A.aLy(A.aKC(j.e)).f8(0,j.w))
@@ -44170,7 +44170,7 @@ if(j.length===0){q=A.c([],t.rc)
 s=1
 break}p=4
 s=7
-return A.W(A.aLE(A.fE(j+"?type=supplier")),$async$wD)
+return A.W(A.aLE(A.fE(j+"?type=supplier&_t="+Date.now())),$async$wD)
 case 7:n=b
 if(n.b===200){j=n
 m=B.bW.f8(0,A.aLy(A.aKC(j.e)).f8(0,j.w))
@@ -101191,7 +101191,7 @@ B.a9e=new A.dQ("\u05d4\u05d2\u05d3\u05e8\u05ea \u05de\u05e2\u05e8\u05db\u05ea",n
 B.a9f=new A.dQ("\u05d4\u05d5\u05e1\u05e4\u05ea \u05e1\u05e4\u05e7",null,null,null,null,null,null,null,null,null)
 B.a9g=new A.dQ("\u05d1\u05d9\u05d8\u05d5\u05dc",null,null,null,null,null,null,null,null,null)
 B.a9h=new A.dQ("\u05e9\u05d2\u05d9\u05d0\u05d4",null,null,null,null,null,null,null,null,null)
-B.a9i=new A.dQ("\u05de\u05e2\u05e7\u05d1 \u05d4\u05d5\u05e6\u05d0\u05d5\u05ea (v1.4)",null,null,null,null,null,null,null,null,null)
+B.a9i=new A.dQ("\u05de\u05e2\u05e7\u05d1 \u05d4\u05d5\u05e6\u05d0\u05d5\u05ea (v1.5)",null,null,null,null,null,null,null,null,null)
 B.a9j=new A.dQ("\u05d1\u05d7\u05e8 \u05ea\u05d0\u05e8\u05d9\u05da",null,B.h6,null,null,null,null,null,null,null)
 B.aer=new A.aou(0,"system")
 B.a_P=new A.j(0.056,0.024)
