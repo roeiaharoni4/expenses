@@ -1,3 +1,4 @@
-VERSION 2.2 (DATE FIX + SETUP FIX).
-This version fixes the "One Day Before" bug and forces the Setup Screen if you missed it.
-Check App Title: "v2.2".
+VERSION 2.3 (RESET BUTTON & FINAL DATE FIX).
+Use the "Reset" icon (Rotate Arrow) in the top bar to fix connection issues.
+Date logic is now bulletproof.
+Check App Title: "v2.3".

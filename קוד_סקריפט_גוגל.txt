@@ -54,11 +54,19 @@ function doGet(e) {
     'שם_לקוח': 'customerName'
   };
 
-  var result = rows.map(function(row) {
     var obj = {};
     headers.forEach(function(header, i) {
       var key = keyMap[header] || header; 
-      obj[key] = row[i];
+      var value = row[i];
+      // FIX: Force Date to YYYY-MM-DD string to avoid timezone shifts in JSON.stringify
+      if (value instanceof Date) {
+        var y = value.getFullYear();
+        var m = ('0' + (value.getMonth() + 1)).slice(-2);
+        var d = ('0' + value.getDate()).slice(-2);
+        obj[key] = y + '-' + m + '-' + d;
+      } else {
+        obj[key] = value;
+      }
     });
     return obj;
   });
