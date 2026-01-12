@@ -1,10 +1,20 @@
-// Google Apps Script Code (Hebrew Headers Version)
+// Google Apps Script Code (Expense + CRM Version)
 
 function doGet(e) {
   var type = e.parameter.type || 'expense';
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   
-  var sheetName = type == 'supplier' ? 'Suppliers' : 'All_Expenses_Master';
+  var sheetName;
+  if (type == 'supplier') {
+    sheetName = 'Suppliers';
+  } else if (type == 'customer') {
+    sheetName = 'Customers';
+  } else if (type == 'income') {
+    sheetName = 'All_Incomes_Master';
+  } else {
+    sheetName = 'All_Expenses_Master';
+  }
+
   var sheet = ss.getSheetByName(sheetName);
   
   if (!sheet) {
@@ -18,28 +28,35 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
   
-  // Headers are in Hebrew now, but we need to map them to English keys for the App
-  // ['מזהה', 'סכום', 'תאריך', ...]
+  // Headers (Hebrew default)
   var headers = data[0]; 
   var rows = data.slice(1);
   
   // Key Translation Map (Hebrew to English)
   var keyMap = {
+    // Shared
     'מזהה': 'id',
     'סכום': 'amount',
     'תאריך': 'date',
-    'מזהה_ספק': 'supplierId',
-    'שם_ספק': 'supplierName',
-    'שם': 'name',
     'קטגוריה': 'category',
     'הערות': 'notes',
-    'מספר_חשבונית': 'invoiceNumber'
+    'מספר_חשבונית': 'invoiceNumber',
+    'שם': 'name',
+    'טלפון': 'phone',
+    'אימייל': 'email',
+
+    // Expenses
+    'מזהה_ספק': 'supplierId',
+    'שם_ספק': 'supplierName',
+    
+    // Incomes
+    'מזהה_לקוח': 'customerId',
+    'שם_לקוח': 'customerName'
   };
 
   var result = rows.map(function(row) {
     var obj = {};
     headers.forEach(function(header, i) {
-      // Use mapped English key if exists, otherwise original header
       var key = keyMap[header] || header; 
       obj[key] = row[i];
     });
@@ -59,54 +76,78 @@ function doPost(e) {
     var sheet = ss.getSheetByName("Suppliers");
     if (!sheet) {
       sheet = ss.insertSheet("Suppliers");
-      // Hebrew Headers
       sheet.appendRow(["מזהה", "שם"]);
     }
+    // Prevent duplicates handled by app, but good to check here too if needed
     sheet.appendRow([params.id, params.name]);
     
-  } else {
-    // Expense Handling
+  } else if (type == 'customer') {
+    var sheet = ss.getSheetByName("Customers");
+    if (!sheet) {
+      sheet = ss.insertSheet("Customers");
+      sheet.appendRow(["מזהה", "שם", "טלפון", "אימייל"]);
+    }
+    sheet.appendRow([params.id, params.name, params.phone, params.email]);
+
+  } else if (type == 'income') {
+    // 1. Write to Income Master
+    var masterSheet = ss.getSheetByName("All_Incomes_Master");
+    if (!masterSheet) {
+      masterSheet = ss.insertSheet("All_Incomes_Master");
+      masterSheet.appendRow(["מזהה", "סכום", "תאריך", "מזהה_לקוח", "שם_לקוח", "קטגוריה", "הערות", "מספר_חשבונית"]);
+    }
+    masterSheet.appendRow([
+      params.id, params.amount, params.date, params.customerId, params.customerName || "Unknown",
+      params.category, params.notes, params.invoiceNumber
+    ]);
+
+    // 2. Write to Specific Customer Sheet
+    var customerName = params.customerName || "Misc_Income";
+    var safeName = "Inc_" + customerName.replace(/[:\/\\?*\[\]]/g, "_"); // Prefix Inc_ to avoid confusion with Suppliers? Or just keep same name?
+    // Let's keep separate sheets for simplicity or mix? 
+    // Usually customers and suppliers are different entities.
+    // Let's just use the name as sheet name. If a customer has same name as supplier, they share the sheet? No, confusing.
+    // Let's prefix customer sheets with "C_" and supplier with "S_"??
+    // No, user wanted "Rami Levy" tab. 
+    // We will assume names are unique enough or user handles it. 
+    // Actually, for Incomes, user might want to see them in the SAME tab if it's the same entity?
+    // Let's create a specific sheet for the customer.
     
-    // 1. Write to MASTER sheet
+    var customerSheet = ss.getSheetByName(safeName); 
+    if (!customerSheet) {
+      customerSheet = ss.insertSheet(safeName);
+      customerSheet.appendRow(["מזהה", "סכום", "תאריך", "קטגוריה", "הערות", "מספר_חשבונית", "סוג"]); // Added 'Type' column
+    }
+    
+    customerSheet.appendRow([
+      params.id, params.amount, params.date, params.category, params.notes, params.invoiceNumber, "הכנסה"
+    ]);
+
+  } else {
+    // Expense Handling (Default)
     var masterSheet = ss.getSheetByName("All_Expenses_Master");
     if (!masterSheet) {
       masterSheet = ss.insertSheet("All_Expenses_Master");
-      // Hebrew Headers
       masterSheet.appendRow(["מזהה", "סכום", "תאריך", "מזהה_ספק", "שם_ספק", "קטגוריה", "הערות", "מספר_חשבונית"]);
     }
     
-    var rowData = [
-      params.id, 
-      params.amount, 
-      params.date, 
-      params.supplierId, 
-      params.supplierName || "Unknown", 
-      params.category, 
-      params.notes, 
-      params.invoiceNumber
-    ];
+    masterSheet.appendRow([
+      params.id, params.amount, params.date, params.supplierId, params.supplierName || "Unknown", 
+      params.category, params.notes, params.invoiceNumber
+    ]);
     
-    masterSheet.appendRow(rowData);
-    
-    // 2. Write to SPECIFIC SUPPLIER sheet
+    // Write to Supplier Sheet
     var supplierName = params.supplierName || "Misc";
-    // Sanitize sheet name
     var safeName = supplierName.replace(/[:\/\\?*\[\]]/g, "_");
     var supplierSheet = ss.getSheetByName(safeName);
     
     if (!supplierSheet) {
       supplierSheet = ss.insertSheet(safeName);
-      // Hebrew Headers for Supplier Sheet
-      supplierSheet.appendRow(["מזהה", "סכום", "תאריך", "קטגוריה", "הערות", "מספר_חשבונית"]);
+      supplierSheet.appendRow(["מזהה", "סכום", "תאריך", "קטגוריה", "הערות", "מספר_חשבונית", "סוג"]);
     }
     
     supplierSheet.appendRow([
-      params.id, 
-      params.amount, 
-      params.date, 
-      params.category, 
-      params.notes, 
-      params.invoiceNumber
+      params.id, params.amount, params.date, params.category, params.notes, params.invoiceNumber, "הוצאה"
     ]);
   }
   
