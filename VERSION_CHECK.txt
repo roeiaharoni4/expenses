@@ -1,6 +1,4 @@
-VERSION 2.4 (CRM: Customers & Leads).
-Includes:
-- Leads Pipeline (New, In Progress, Won/Lost).
-- Customer Directory (Call/WhatsApp).
-- Lead Data Models.
-Ensure Google Script is UPDATED for Leads!
+VERSION 2.5 (Communication Update).
+- Added Email Icon (Orange).
+- Fixed WhatsApp Icon (Blue Chat Bubble).
+- Communication buttons now visible on Pipeline cards too.
