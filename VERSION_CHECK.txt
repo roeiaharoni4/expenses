@@ -1,4 +1,5 @@
-VERSION 2.7 (Add Customer Fixed).
-- Added "Add Customer" Dialog with Email field.
-- Fixed Button Layout.
-- Ensured external launch for WhatsApp.
+VERSION 2.8 (VISUAL CHECK).
+- AppBar is PURPLE (Debugging/Confirmation Color).
+- Title says 'v2.8'.
+- Add Customer Dialog includes EMAIL field.
+If you see RED AppBar, you are still on OLD VERSION. Use Incognito.
