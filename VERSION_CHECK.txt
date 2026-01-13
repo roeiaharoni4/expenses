@@ -1,4 +1,6 @@
-VERSION 2.3 (RESET BUTTON & FINAL DATE FIX).
-Use the "Reset" icon (Rotate Arrow) in the top bar to fix connection issues.
-Date logic is now bulletproof.
-Check App Title: "v2.3".
+VERSION 2.4 (CRM: Customers & Leads).
+Includes:
+- Leads Pipeline (New, In Progress, Won/Lost).
+- Customer Directory (Call/WhatsApp).
+- Lead Data Models.
+Ensure Google Script is UPDATED for Leads!

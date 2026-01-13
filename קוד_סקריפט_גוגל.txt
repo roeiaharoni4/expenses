@@ -11,6 +11,8 @@ function doGet(e) {
     sheetName = 'Customers';
   } else if (type == 'income') {
     sheetName = 'All_Incomes_Master';
+  } else if (type == 'lead') {
+    sheetName = 'Leads';
   } else {
     sheetName = 'All_Expenses_Master';
   }
@@ -50,10 +52,17 @@ function doGet(e) {
     'שם_ספק': 'supplierName',
     
     // Incomes
+    // Incomes
     'מזהה_לקוח': 'customerId',
-    'שם_לקוח': 'customerName'
+    'שם_לקוח': 'customerName',
+    
+    // Leads
+    'סטטוס': 'status',
+    'שווי': 'value',
+    'נוצר_בתאריך': 'dateCreated'
   };
 
+  var result = rows.map(function(row) {
     var obj = {};
     headers.forEach(function(header, i) {
       var key = keyMap[header] || header; 
@@ -96,6 +105,18 @@ function doPost(e) {
       sheet.appendRow(["מזהה", "שם", "טלפון", "אימייל"]);
     }
     sheet.appendRow([params.id, params.name, params.phone, params.email]);
+
+  } else if (type == 'lead') {
+    // Lead Handling
+    var sheet = ss.getSheetByName("Leads");
+    if (!sheet) {
+      sheet = ss.insertSheet("Leads");
+      sheet.appendRow(["מזהה", "שם", "טלפון", "אימייל", "סטטוס", "שווי", "הערות", "נוצר_בתאריך"]);
+    }
+    sheet.appendRow([
+      params.id, params.name, params.phone, params.email,
+      params.status, params.value, params.notes, params.dateCreated
+    ]);
 
   } else if (type == 'income') {
     // 1. Write to Income Master
