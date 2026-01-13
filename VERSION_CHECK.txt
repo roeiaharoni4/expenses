@@ -1,4 +1,5 @@
-VERSION 2.5 (Communication Update).
-- Added Email Icon (Orange).
-- Fixed WhatsApp Icon (Blue Chat Bubble).
-- Communication buttons now visible on Pipeline cards too.
+VERSION 2.6 (Force Fixes).
+- WhatsApp: Using external mode (More reliable).
+- Email: Icon always visible (Grey if empty).
+- Calls: Direct dial intent.
+If buttons work now, it was a browser security block.
