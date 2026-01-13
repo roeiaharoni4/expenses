@@ -1,5 +1,4 @@
-VERSION 2.6 (Force Fixes).
-- WhatsApp: Using external mode (More reliable).
-- Email: Icon always visible (Grey if empty).
-- Calls: Direct dial intent.
-If buttons work now, it was a browser security block.
+VERSION 2.7 (Add Customer Fixed).
+- Added "Add Customer" Dialog with Email field.
+- Fixed Button Layout.
+- Ensured external launch for WhatsApp.
