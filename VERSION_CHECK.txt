@@ -1,4 +1,5 @@
-VERSION 2.7 (Add Customer Fixed).
-- Added "Add Customer" Dialog with Email field.
-- Fixed Button Layout.
-- Ensured external launch for WhatsApp.
+VERSION 2.9 (Pipeline Email Fixed).
+- AppBar is back to BLUE (Standard Color).
+- Title says 'v2.9'.
+- PIPELINE "Add Lead" Dialog NOW includes EMAIL field.
+- Leads with email show orange email icon.
