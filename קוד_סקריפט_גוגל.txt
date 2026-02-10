@@ -1,4 +1,11 @@
-// Google Apps Script Code (Expense + CRM Version)
+// Google Apps Script Code (Expense + CRM Version) - Refactored (Dynamic Columns + Supplier Lookup)
+
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu('Expense Manager')
+      .addItem('Refresh Master Sheet', 'rebuildExpensesMaster')
+      .addToUi();
+}
 
 function doGet(e) {
   var type = e.parameter.type || 'expense';
@@ -50,16 +57,15 @@ function doGet(e) {
     // Expenses
     'מזהה_ספק': 'supplierId',
     'שם_ספק': 'supplierName',
+    'נוצר_בתאריך': 'createdAt', // Added mapping
     
-    // Incomes
     // Incomes
     'מזהה_לקוח': 'customerId',
     'שם_לקוח': 'customerName',
     
     // Leads
     'סטטוס': 'status',
-    'שווי': 'value',
-    'נוצר_בתאריך': 'dateCreated'
+    'שווי': 'value'
   };
 
   var result = rows.map(function(row) {
@@ -95,7 +101,6 @@ function doPost(e) {
       sheet = ss.insertSheet("Suppliers");
       sheet.appendRow(["מזהה", "שם"]);
     }
-    // Prevent duplicates handled by app, but good to check here too if needed
     sheet.appendRow([params.id, params.name]);
     
   } else if (type == 'customer') {
@@ -107,7 +112,6 @@ function doPost(e) {
     sheet.appendRow([params.id, params.name, params.phone, params.email]);
 
   } else if (type == 'lead') {
-    // Lead Handling
     var sheet = ss.getSheetByName("Leads");
     if (!sheet) {
       sheet = ss.insertSheet("Leads");
@@ -119,7 +123,6 @@ function doPost(e) {
     ]);
 
   } else if (type == 'income') {
-    // 1. Write to Income Master
     var masterSheet = ss.getSheetByName("All_Incomes_Master");
     if (!masterSheet) {
       masterSheet = ss.insertSheet("All_Incomes_Master");
@@ -130,22 +133,14 @@ function doPost(e) {
       params.category, params.notes, params.invoiceNumber
     ]);
 
-    // 2. Write to Specific Customer Sheet
+    // Write to Specific Customer Sheet
     var customerName = params.customerName || "Misc_Income";
-    var safeName = "Inc_" + customerName.replace(/[:\/\\?*\[\]]/g, "_"); // Prefix Inc_ to avoid confusion with Suppliers? Or just keep same name?
-    // Let's keep separate sheets for simplicity or mix? 
-    // Usually customers and suppliers are different entities.
-    // Let's just use the name as sheet name. If a customer has same name as supplier, they share the sheet? No, confusing.
-    // Let's prefix customer sheets with "C_" and supplier with "S_"??
-    // No, user wanted "Rami Levy" tab. 
-    // We will assume names are unique enough or user handles it. 
-    // Actually, for Incomes, user might want to see them in the SAME tab if it's the same entity?
-    // Let's create a specific sheet for the customer.
+    var safeName = "Inc_" + customerName.replace(/[:\/\\?*\[\]]/g, "_");
     
     var customerSheet = ss.getSheetByName(safeName); 
     if (!customerSheet) {
       customerSheet = ss.insertSheet(safeName);
-      customerSheet.appendRow(["מזהה", "סכום", "תאריך", "קטגוריה", "הערות", "מספר_חשבונית", "סוג"]); // Added 'Type' column
+      customerSheet.appendRow(["מזהה", "סכום", "תאריך", "קטגוריה", "הערות", "מספר_חשבונית", "סוג"]);
     }
     
     customerSheet.appendRow([
@@ -153,32 +148,160 @@ function doPost(e) {
     ]);
 
   } else {
-    // Expense Handling (Default)
-    var masterSheet = ss.getSheetByName("All_Expenses_Master");
-    if (!masterSheet) {
-      masterSheet = ss.insertSheet("All_Expenses_Master");
-      masterSheet.appendRow(["מזהה", "סכום", "תאריך", "מזהה_ספק", "שם_ספק", "קטגוריה", "הערות", "מספר_חשבונית"]);
-    }
+    // Expense Handling (UPDATED)
     
-    masterSheet.appendRow([
-      params.id, params.amount, params.date, params.supplierId, params.supplierName || "Unknown", 
-      params.category, params.notes, params.invoiceNumber
-    ]);
-    
-    // Write to Supplier Sheet
+    // 1. Write to Supplier Sheet ONLY
     var supplierName = params.supplierName || "Misc";
     var safeName = supplierName.replace(/[:\/\\?*\[\]]/g, "_");
     var supplierSheet = ss.getSheetByName(safeName);
     
+    // Add Timestamp
+    var timestamp = new Date(); 
+    
     if (!supplierSheet) {
       supplierSheet = ss.insertSheet(safeName);
-      supplierSheet.appendRow(["מזהה", "סכום", "תאריך", "קטגוריה", "הערות", "מספר_חשבונית", "סוג"]);
+      supplierSheet.appendRow(["מזהה", "סכום", "תאריך", "קטגוריה", "הערות", "מספר_חשבונית", "סוג", "נוצר_בתאריך"]);
     }
     
     supplierSheet.appendRow([
-      params.id, params.amount, params.date, params.category, params.notes, params.invoiceNumber, "הוצאה"
+      params.id, params.amount, params.date, params.category, params.notes, params.invoiceNumber, "הוצאה", timestamp
     ]);
+    
+    // 2. Rebuild the Master Sheet to ensure it's in sync
+    rebuildExpensesMaster();
   }
   
   return ContentService.createTextOutput(JSON.stringify({"status": "success"}));
+}
+
+function rebuildExpensesMaster() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var masterSheet = ss.getSheetByName("All_Expenses_Master");
+  
+  if (!masterSheet) {
+    masterSheet = ss.insertSheet("All_Expenses_Master");
+  }
+  
+  // Clear existing content
+  masterSheet.clear();
+  
+  // Set Headers for Master Sheet
+  masterSheet.appendRow(["מזהה", "סכום", "תאריך", "מזהה_ספק", "שם_ספק", "קטגוריה", "הערות", "מספר_חשבונית", "נוצר_בתאריך"]);
+  
+  var sheets = ss.getSheets();
+  var allExpenses = [];
+  
+  // --- Step 1: Build Supplier Lookup Map ---
+  // We need to map the Sheet Name (which is the "safe" name) back to the real Supplier ID and Name.
+  var supplierMap = {};
+  var suppliersSheet = ss.getSheetByName("Suppliers");
+  if (suppliersSheet) {
+    var sData = suppliersSheet.getDataRange().getValues();
+    // Headers: id, name
+    // Assume row 1 is headers.
+    if (sData.length > 1) {
+       for (var k = 1; k < sData.length; k++) {
+         var sRow = sData[k];
+         var sId = sRow[0];
+         var sName = sRow[1];
+         if (sName) {
+           var sSafeName = sName.replace(/[:\/\\?*\[\]]/g, "_"); // Same regex as in doPost
+           supplierMap[sSafeName] = {
+             id: sId,
+             name: sName
+           };
+         }
+       }
+    }
+  }
+
+  // Helper to find column index by header name
+  function getColIndex(headers, possibleNames) {
+    for (var i = 0; i < headers.length; i++) {
+      if (possibleNames.indexOf(headers[i]) > -1) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  // --- Step 2: Iterate through all sheets ---
+  for (var i = 0; i < sheets.length; i++) {
+    var sheet = sheets[i];
+    var sheetName = sheet.getName();
+    
+    // Skip System Sheets and Income Sheets
+    if (sheetName == "All_Expenses_Master" || 
+        sheetName == "All_Incomes_Master" || 
+        sheetName == "Suppliers" || 
+        sheetName == "Customers" || 
+        sheetName == "Leads" || 
+        sheetName.indexOf("Inc_") === 0) {
+      continue;
+    }
+    
+    // Assume it's a Supplier Sheet
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) continue; 
+    
+    // Get all data including headers
+    var fullData = sheet.getDataRange().getValues();
+    var headers = fullData[0];
+    var data = fullData.slice(1); // Rows excluding headers
+    
+    // Map existing columns dynamically
+    var idxId = getColIndex(headers, ["מזהה", "id", "ID"]);
+    var idxAmount = getColIndex(headers, ["סכום", "amount", "Amount"]);
+    var idxDate = getColIndex(headers, ["תאריך", "date", "Date"]);
+    var idxCategory = getColIndex(headers, ["קטגוריה", "category"]);
+    var idxNotes = getColIndex(headers, ["הערות", "notes"]);
+    var idxInvoice = getColIndex(headers, ["מספר_חשבונית", "חשבונית", "invoice"]);
+    var idxCreated = getColIndex(headers, ["נוצר_בתאריך", "createdAt"]);
+    
+    // If essential columns are missing, it might not be a valid expense sheet
+    if (idxId === -1 && idxAmount === -1) continue;
+
+    // Resolve Supplier Info
+    var supplierInfo = supplierMap[sheetName];
+    var realSupplierId = supplierInfo ? supplierInfo.id : ("SUP_" + sheetName);
+    var realSupplierName = supplierInfo ? supplierInfo.name : sheetName;
+
+    for (var j = 0; j < data.length; j++) {
+      var row = data[j];
+      
+      // Safety check: ensure row has data
+      var amount = (idxAmount > -1) ? row[idxAmount] : "";
+      if (amount === "" && (idxId === -1 || row[idxId] === "")) continue;
+
+      var id = (idxId > -1) ? row[idxId] : "";
+      var date = (idxDate > -1) ? row[idxDate] : "";
+      var category = (idxCategory > -1) ? row[idxCategory] : "";
+      var notes = (idxNotes > -1) ? row[idxNotes] : "";
+      var invoice = (idxInvoice > -1) ? row[idxInvoice] : "";
+      var createdAt = (idxCreated > -1) ? row[idxCreated] : "";
+      
+      allExpenses.push([
+        id, 
+        amount, 
+        date, 
+        realSupplierId,   // Use matched ID
+        realSupplierName, // Use matched Name
+        category, 
+        notes, 
+        invoice, 
+        createdAt 
+      ]);
+    }
+  }
+  
+  // Sort by Date (Column 3, index 2) Descending
+  allExpenses.sort(function(a, b) {
+    var dateA = new Date(a[2]);
+    var dateB = new Date(b[2]);
+    return dateB - dateA;
+  });
+  
+  if (allExpenses.length > 0) {
+    masterSheet.getRange(2, 1, allExpenses.length, 9).setValues(allExpenses);
+  }
 }
